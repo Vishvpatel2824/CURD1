@@ -1,40 +1,46 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { getData, deleteData, editData } from "../server";
-import { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 function Table() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ username: "", email: "" })
+    const [formData, setFormData] = useState({ username: "", email: "" });
     const [userData, setUserData] = useState([]);
-    const [editId, setEditId] = useState("")
-    async function fetchData() {
-        const response = await getData();
-        setUserData(response.data);
-    }
-    fetchData();
+    const [editId, setEditId] = useState("");
+
+    // Fetch data only once when the component mounts
+    useEffect(() => {
+        async function fetchData() {
+            const response = await getData();
+            setUserData(response.data);
+        }
+        fetchData();
+    }, []); // Empty dependency array ensures it runs only once
 
     async function handleDelete(id) {
         await deleteData(id);
-        toast.success("User delete successfully");
+        toast.success("User deleted successfully");
+        setUserData(userData.filter(user => user.id !== id)); // Remove user from state
     }
 
     function handleEdit(id) {
-        const obj = userData.find((element) => element.id === id)
-        setFormData({ username: obj.username, email: obj.email })
-        setEditId(id)
+        const obj = userData.find((element) => element.id === id);
+        setFormData({ username: obj.username, email: obj.email });
+        setEditId(id);
     }
 
     async function submitEdit() {
+        await editData(editId, formData);
+        setFormData({ username: "", email: "" });
+        setEditId("");
+        toast.success("User edited successfully");
 
-
-        await editData(editId, formData)
-        setFormData({ username: "", email: "" })
-        setEditId("")
-        toast.success("User edit successfully");
+        // Refresh user data after editing
+        const response = await getData();
+        setUserData(response.data);
     }
-
 
     return (
         <div>
@@ -49,7 +55,7 @@ function Table() {
                                 <tr>
                                     <th>Username</th>
                                     <th>Email</th>
-                                    <th>Actios</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -69,7 +75,7 @@ function Table() {
                                                     <button
                                                         className="btn border ms-3"
                                                         onClick={() => handleEdit(ele.id)}
-                                                        a-bs-toggle="modal"
+                                                        data-bs-toggle="modal" // ✅ Fixed Bootstrap attribute
                                                         data-bs-target="#exampleModal"
                                                         type="button"
                                                     >
@@ -84,8 +90,10 @@ function Table() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal */}
             <div
-                className="modal fade" dat
+                className="modal fade"
                 id="exampleModal"
                 tabIndex="-1"
                 aria-labelledby="exampleModalLabel"
@@ -105,17 +113,18 @@ function Table() {
                             ></button>
                         </div>
                         <div className="modal-body">
-                            <form action="">
+                            <form>
                                 <div className="input-group mb-3">
                                     <input
                                         type="text"
                                         className="form-control"
                                         placeholder="Username"
                                         aria-label="Username"
-                                        aria-describedby="basic-addon1"
                                         name="username"
                                         value={formData.username}
-                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, username: e.target.value })
+                                        }
                                     />
                                 </div>
                                 <div className="input-group mb-3">
@@ -124,10 +133,11 @@ function Table() {
                                         className="form-control"
                                         placeholder="Email"
                                         aria-label="Email"
-                                        aria-describedby="basic-addon1"
                                         name="email"
                                         value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, email: e.target.value })
+                                        }
                                     />
                                 </div>
                             </form>
@@ -140,7 +150,12 @@ function Table() {
                             >
                                 Close
                             </button>
-                            <button data-bs-dismiss="modal" type="button" className="btn btn-primary" onClick={submitEdit}>
+                            <button
+                                data-bs-dismiss="modal"
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={submitEdit}
+                            >
                                 Edit
                             </button>
                         </div>
